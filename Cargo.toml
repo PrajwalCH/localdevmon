@@ -1,0 +1,13 @@
+[package]
+name = "localdevmon"
+version = "0.1.0"
+authors = ["PrajwalCH <prajjwal2058@gmail.com>"]
+edition = "2018"
+description = "A local http dev server for web that monitors for any changes in your app and auto reload the page on browser without restarting server"
+readme = "README.md"
+repository = "https://github.com/PrajwalCH/localdevmon"
+license = "MIT"
+keywords = ["localhost", "http", "server", "live_server"]
+categories = ["dev server", "live_server", "server", "web server", "websocket"]
+
+[dependencies]
