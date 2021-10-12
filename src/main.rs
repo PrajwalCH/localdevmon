@@ -1,12 +1,12 @@
 use std::process::exit;
 
 use localdevmon::{
-    args_parser::{ArgsParserErr, parse_args},
-    server::ServerConfig
+    args_parser::{parse_args, ArgsParserErr},
+    server::ServerConfig,
 };
 
 fn main() {
-    let mut server_config = ServerConfig::init_default();
+    let mut server_config = ServerConfig::default();
 
     let path = parse_args();
 
