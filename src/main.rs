@@ -2,7 +2,7 @@ use std::process::exit;
 
 use localdevmon::{
     args_parser::{parse_args, ArgsParserErr},
-    server::ServerConfig,
+    server::{self, ServerConfig},
 };
 
 fn main() {
@@ -20,5 +20,5 @@ fn main() {
         }
     }
 
-    println!("{:#?}", server_config);
+    server::start(server_config);
 }
