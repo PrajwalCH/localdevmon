@@ -1,9 +1,11 @@
-pub mod map_route;
+mod map_rout;
 
 use std::env;
 use std::io::{self, Read};
 use std::net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::path::PathBuf;
+
+use map_route::*;
 
 #[derive(Debug)]
 pub struct ServerConfig {
