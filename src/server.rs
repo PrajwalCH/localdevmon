@@ -26,8 +26,7 @@ impl Default for ServerConfig {
 
 pub fn start(server_config: ServerConfig) -> io::Result<()> {
     let routes = map_route(&server_config.path)?;
-    let sock_addr = SocketAddr::from((server_config.host_addr, server_config.port_num));
-    let listener = TcpListener::bind(sock_addr)?;
+    let listener = tcp_listen(server_config.host_addr, server_config.port_num)?;
 
     for stream in listener.incoming() {
         let stream = stream?;
@@ -36,9 +35,16 @@ pub fn start(server_config: ServerConfig) -> io::Result<()> {
         handle_request(stream);
     }
 
-    println!("{:#?}", routes);
-    println!("{:?}", sock_addr);
     Ok(())
+}
+
+fn tcp_listen(host_addr: Ipv4Addr, port_num: u16) -> io::Result<TcpListener> {
+    let sock_addr = SocketAddr::from((host_addr, port_num));
+    let listener = TcpListener::bind(sock_addr)?;
+
+    println!("Server listening on: http://localhost:{}", port_num);
+
+    Ok(listener)
 }
 
 fn handle_request(mut stream: TcpStream) {
