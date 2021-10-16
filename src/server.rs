@@ -32,7 +32,7 @@ pub fn start(server_config: ServerConfig) -> io::Result<()> {
         let stream = stream?;
 
         println!("Connection established");
-        handle_request(stream);
+        handle_connection(stream);
     }
 
     Ok(())
@@ -47,7 +47,7 @@ fn tcp_listen(host_addr: Ipv4Addr, port_num: u16) -> io::Result<TcpListener> {
     Ok(listener)
 }
 
-fn handle_request(mut stream: TcpStream) {
+fn handle_connection(mut stream: TcpStream) {
     let mut buffer = [0; 1024];
 
     stream.read(&mut buffer).unwrap();
