@@ -70,7 +70,7 @@ fn parse_request(buffer: &[u8]) -> HTTPRequest {
     HTTPRequest {
         method: String::from_utf8_lossy(&request_line[0][..]).into_owned(),
         path: String::from_utf8_lossy(&request_line[1][..]).into_owned(),
-        version: String::from_utf8_lossy(&request_line[2][..]).into_owned(),
+        version: parse_http_version(&request_line[2]),
     }
 }
 
@@ -94,4 +94,14 @@ fn parse_request_line(buffer: &[u8]) -> (Vec<Vec<u8>>, usize) {
         .collect();
 
     (request_line, request_line_end)
+}
+
+fn parse_http_version(buffer: &[u8]) -> String {
+    if !buffer.starts_with(b"HTTP/") {
+        return "0.1".to_string();
+    }
+
+    let (_, version) = buffer.split_at(5);
+
+    String::from_utf8_lossy(&version).into_owned()
 }
