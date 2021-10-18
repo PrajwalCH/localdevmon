@@ -63,6 +63,7 @@ fn handle_connection(mut stream: TcpStream) {
 
 fn parse_request(buffer: &[u8]) -> HTTPRequest {
     let (request_line, _request_line_end) = parse_request_line(&buffer);
+    // TODO: implement headers parser
     //let (_, headers) = buffer.split_at(request_line_end);
     println!("{:?}", request_line);
 
