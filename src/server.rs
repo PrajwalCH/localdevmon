@@ -1,4 +1,5 @@
 mod map_route;
+mod request;
 
 use std::env;
 use std::io::{self, Read};
@@ -6,19 +7,13 @@ use std::net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::path::PathBuf;
 
 use map_route::*;
+use request::HTTPRequest;
 
 #[derive(Debug)]
 pub struct ServerConfig {
     pub port_num: u16,
     pub host_addr: Ipv4Addr,
     pub path: PathBuf,
-}
-
-#[derive(Debug)]
-struct HTTPRequest {
-    method: String,
-    path: String,
-    version: String,
 }
 
 impl Default for ServerConfig {
@@ -57,51 +52,6 @@ fn tcp_listen(host_addr: Ipv4Addr, port_num: u16) -> io::Result<TcpListener> {
 fn handle_connection(mut stream: TcpStream) {
     let mut buffer = [0; 1024];
     stream.read(&mut buffer).unwrap();
-    let request = parse_request(&buffer);
-    println!("{:#?}", request);
-}
-
-fn parse_request(buffer: &[u8]) -> HTTPRequest {
-    let (request_line, _request_line_end) = parse_request_line(&buffer);
-    // TODO: implement headers parser
-    //let (_, headers) = buffer.split_at(request_line_end);
-    println!("{:?}", request_line);
-
-    HTTPRequest {
-        method: String::from_utf8_lossy(&request_line[0][..]).into_owned(),
-        path: String::from_utf8_lossy(&request_line[1][..]).into_owned(),
-        version: parse_http_version(&request_line[2]),
-    }
-}
-
-fn parse_request_line(buffer: &[u8]) -> (Vec<Vec<u8>>, usize) {
-    let mut request_line: Vec<u8> = Vec::new();
-    let mut request_line_end = 0;
-
-    for (idx, byte) in buffer.iter().enumerate() {
-        if *byte == b'\n' {
-            request_line_end = idx;
-            // remove previously pushed '\r' and stop the loop
-            request_line.pop();
-            break;
-        }
-        request_line.push(*byte);
-    }
-
-    let request_line: Vec<Vec<u8>> = request_line
-        .split(|byte| *byte == b' ')
-        .map(|token| token.to_vec()) // convert &[u8] to owned Vec<u8>
-        .collect();
-
-    (request_line, request_line_end)
-}
-
-fn parse_http_version(buffer: &[u8]) -> String {
-    if !buffer.starts_with(b"HTTP/") {
-        return "0.1".to_string();
-    }
-
-    let (_, version) = buffer.split_at(5);
-
-    String::from_utf8_lossy(&version).into_owned()
+    let request_obj = HTTPRequest::parse(&buffer);
+    println!("{:#?}", request_obj);
 }
