@@ -32,8 +32,6 @@ pub fn start(server_config: ServerConfig) -> io::Result<()> {
 
     for stream in listener.incoming() {
         let stream = stream?;
-
-        println!("Connection established");
         handle_connection(stream);
     }
 
@@ -53,5 +51,13 @@ fn handle_connection(mut stream: TcpStream) {
     let mut buffer = [0; 1024];
     stream.read(&mut buffer).unwrap();
     let request_obj = HTTPRequest::parse(&buffer);
-    println!("{:#?}", request_obj);
+    log_request(&request_obj);
+    //println!("{:#?}", request_obj);
+}
+
+fn log_request(request_obj: &HTTPRequest) {
+    println!(
+        "\x1b[1;32m[request]\x1b[0m {} {} HTTP/{}",
+        request_obj.method, request_obj.path, request_obj.version
+    );
 }
