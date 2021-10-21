@@ -1,11 +1,13 @@
+mod connection_handler;
 mod map_route;
 mod request;
 
 use std::env;
-use std::io::{self, Read};
-use std::net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream};
+use std::io;
+use std::net::{Ipv4Addr, SocketAddr, TcpListener};
 use std::path::PathBuf;
 
+use connection_handler::ConnectionHandler;
 use map_route::*;
 use request::HTTPRequest;
 
@@ -32,7 +34,7 @@ pub fn start(server_config: ServerConfig) -> io::Result<()> {
 
     for stream in listener.incoming() {
         let stream = stream?;
-        handle_connection(stream);
+        let _conn_handler = ConnectionHandler::new(stream, &routes, Some(log_request));
     }
 
     Ok(())
@@ -45,14 +47,6 @@ fn tcp_listen(host_addr: Ipv4Addr, port_num: u16) -> io::Result<TcpListener> {
     println!("Server listening on: http://localhost:{}", port_num);
 
     Ok(listener)
-}
-
-fn handle_connection(mut stream: TcpStream) {
-    let mut buffer = [0; 1024];
-    stream.read(&mut buffer).unwrap();
-    let request_obj = HTTPRequest::parse(&buffer);
-    log_request(&request_obj);
-    //println!("{:#?}", request_obj);
 }
 
 fn log_request(request_obj: &HTTPRequest) {
