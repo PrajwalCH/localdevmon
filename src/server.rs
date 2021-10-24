@@ -1,6 +1,5 @@
 mod connection_handler;
-mod map_route;
-mod request;
+mod route_handler;
 
 use std::env;
 use std::io;
@@ -8,8 +7,7 @@ use std::net::{Ipv4Addr, SocketAddr, TcpListener};
 use std::path::PathBuf;
 
 use connection_handler::ConnectionHandler;
-use map_route::*;
-use request::HTTPRequest;
+use route_handler::gen_dir_tree;
 
 #[derive(Debug)]
 pub struct ServerConfig {
@@ -29,7 +27,7 @@ impl Default for ServerConfig {
 }
 
 pub fn start(server_config: ServerConfig) -> io::Result<()> {
-    let routes = map_route(&server_config.path)?;
+    let dir_root_node = gen_dir_tree(&server_config.path)?;
     let listener = tcp_listen(server_config.host_addr, server_config.port_num)?;
 
     for stream in listener.incoming() {
