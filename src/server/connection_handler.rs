@@ -1,3 +1,5 @@
+mod request;
+
 use std::io::{self, Read};
 use std::net::TcpStream;
 use std::path::PathBuf;
@@ -11,7 +13,6 @@ pub struct ConnectionHandler<'a> {
     dir_root_node: &'a DirNode,
     stream: TcpStream,
     request: HTTPRequest,
-    request_logger: Option<LoggerFn>,
 }
 
 impl<'a> ConnectionHandler<'a> {
@@ -25,5 +26,12 @@ impl<'a> ConnectionHandler<'a> {
             stream,
             request,
         })
+    }
+
+    fn log_request(request_obj: &HTTPRequest) {
+        println!(
+            "\x1b[1;32m[request]\x1b[0m {} {} HTTP/{}",
+            request_obj.method, request_obj.path, request_obj.version
+        );
     }
 }

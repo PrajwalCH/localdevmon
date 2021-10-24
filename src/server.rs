@@ -4,7 +4,6 @@ mod route_handler;
 use std::env;
 use std::io;
 use std::net::{Ipv4Addr, SocketAddr, TcpListener};
-use std::path::PathBuf;
 
 use connection_handler::ConnectionHandler;
 use route_handler::gen_dir_tree;
@@ -32,7 +31,7 @@ pub fn start(server_config: ServerConfig) -> io::Result<()> {
 
     for stream in listener.incoming() {
         let stream = stream?;
-        let _conn_handler = ConnectionHandler::new(stream, &routes, Some(log_request));
+        let _conn_handler = ConnectionHandler::new(stream, &dir_root_node);
     }
 
     Ok(())
@@ -45,11 +44,4 @@ fn tcp_listen(host_addr: Ipv4Addr, port_num: u16) -> io::Result<TcpListener> {
     println!("Server listening on: http://localhost:{}", port_num);
 
     Ok(listener)
-}
-
-fn log_request(request_obj: &HTTPRequest) {
-    println!(
-        "\x1b[1;32m[request]\x1b[0m {} {} HTTP/{}",
-        request_obj.method, request_obj.path, request_obj.version
-    );
 }
