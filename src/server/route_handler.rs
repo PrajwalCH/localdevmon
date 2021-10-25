@@ -57,7 +57,7 @@ impl Node {
 pub fn gen_dir_tree<T: AsRef<Path>>(path: T) -> io::Result<DirNode> {
     let path = path.as_ref();
 
-    let mut root_node = Node::new(path.to_path_buf());
+    let mut root_node = Node::new(&path);
 
     path.read_dir().and_then(|entries| {
         for entry in entries {
