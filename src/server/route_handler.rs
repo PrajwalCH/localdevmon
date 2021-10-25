@@ -18,7 +18,7 @@ impl HiddenChecker for PathBuf {
     fn is_hidden(&self) -> bool {
         self.file_name()
             .and_then(|base_name| base_name.to_str())
-            .map_or_else(|| false, |base_name| base_name.starts_with("."))
+            .map_or_else(|| false, |base_name| base_name.starts_with('.'))
     }
 }
 

@@ -4,6 +4,7 @@ mod route_handler;
 use std::env;
 use std::io;
 use std::net::{Ipv4Addr, SocketAddr, TcpListener};
+use std::path::PathBuf;
 
 use connection_handler::ConnectionHandler;
 use route_handler::gen_dir_tree;
@@ -20,7 +21,7 @@ impl Default for ServerConfig {
         ServerConfig {
             port_num: 8000,
             host_addr: Ipv4Addr::new(127, 0, 0, 1),
-            path: env::current_dir().unwrap_or(PathBuf::from(".")),
+            path: env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
         }
     }
 }
