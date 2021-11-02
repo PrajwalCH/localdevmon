@@ -1,10 +1,12 @@
 mod request;
+mod response;
 
 use std::io::{self, Read};
 use std::net::TcpStream;
 
 use super::route_handler::DirNode;
 use request::HTTPRequest;
+use response::HTTPResponse;
 
 pub struct ConnectionHandler<'a> {
     dir_root_node: &'a DirNode,
@@ -30,5 +32,17 @@ impl<'a> ConnectionHandler<'a> {
             "\x1b[1;32m[request]\x1b[0m {} {} HTTP/{}",
             request_obj.method, request_obj.path, request_obj.version
         );
+    }
+
+    pub fn send_response(&mut self) -> HTTPResponse {
+        let http_response = HTTPResponse::new_from_request_obj(
+            &mut self.stream,
+            &self.dir_root_node,
+            &self.request,
+        );
+
+        Self::log_request(&self.request);
+
+        http_response
     }
 }
