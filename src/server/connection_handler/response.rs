@@ -1,8 +1,10 @@
-use std::env;
-use std::path::PathBuf;
+use std::fs;
+use std::io::Write;
+use std::net::TcpStream;
+use std::path::{Path, PathBuf};
 
 use super::request::HTTPRequest;
-use super::route_handler::DirNode;
+use crate::server::route_handler::DirNode;
 
 macro_rules! mimetype_new {
     ($ext:literal, $mtype:literal) => {
@@ -33,7 +35,7 @@ const MIME_TYPES: [MimeType; 68] = [
     mimetype_new!(".epu", "application/epub+zip"),
     mimetype_new!(".gz ", "application/gzip"),
     mimetype_new!(".gif", "image/gif"),
-    mimetype_new!(".htm", "text/html"),
+    mimetype_new!(".html", "text/html"),
     mimetype_new!(".htm", "text/html"),
     mimetype_new!(".ico", "image/vnd.microsoft.icon"),
     mimetype_new!(".ics", "text/calendar"),
@@ -91,25 +93,30 @@ const MIME_TYPES: [MimeType; 68] = [
     mimetype_new!(".7z", "application/x-7z-compressed"),
 ];
 
+const DEFAULT_HTML_FILENAME: &'static str = "index.html";
+
 #[allow(unused)]
-const NOT_FOUND_BODY: &'static [u8] = br#"
+const NOT_FOUND_BODY: &'static str = "
 <html>
 <head>
     <title>404 not found</title>
-    <meta name="viewport" content="width=device-with, initial-scale=1.0" />
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
 </head>
 <body>
-    <h1>404 Not Found</h1>
-"#;
+    <center>
+        <h2>404 Not Found</h2>
+    </center>
+";
 
 #[allow(unused)]
-const HTML_BODY_CLOSE: &'static [u8] = br#"
+const HTML_BODY_CLOSE: &'static str = "
 </body>
 </html>
-"#;
+";
 
 #[allow(unused)]
-pub enum Status {
+#[derive(Clone, Copy)]
+pub enum StatusCode {
     //SwitchingProtocols = 101,
     OK = 200,
     Created = 201,
@@ -152,28 +159,158 @@ pub enum Status {
     HTTPVersionNotSupported = 505,
 }
 
+impl ToString for StatusCode {
+    fn to_string(&self) -> String {
+        match self {
+            StatusCode::OK => "Ok".to_string(),
+            StatusCode::Created => "Created".to_string(),
+            StatusCode::Accepted => "Accepted".to_string(),
+            StatusCode::NoContent => "No Content".to_string(),
+            StatusCode::MovedPermanently => "Moved Permanently".to_string(),
+            StatusCode::Found => "Found".to_string(),
+            StatusCode::BadRequest => "Bad Request".to_string(),
+            StatusCode::Forbidden => "Forbidden".to_string(),
+            StatusCode::NotFound => "Not Found".to_string(),
+            StatusCode::MethodNotAllowed => "Method Not Allowed".to_string(),
+            StatusCode::NotAcceptable => "Not Acceptable".to_string(),
+            StatusCode::RequestTimeout => "Request Timeout".to_string(),
+            StatusCode::URITooLong => "URI Too Long".to_string(),
+            StatusCode::UnsupportedMediaType => "Unsupporte dMedia Type".to_string(),
+            StatusCode::InternalServerError => "Internal Server Error".to_string(),
+            StatusCode::NotImplemented => "Not Implemented".to_string(),
+            StatusCode::HTTPVersionNotSupported => "HTTP Version Not Supported".to_string(),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
 struct MimeType {
     ext: &'static str,
     mtype: &'static str,
 }
 
-impl MimeType {
-    pub fn new(ext: &'static str, mtype: &'static str) -> Self {
-        Self { ext, mtype }
-    }
+// struct for caller
+pub struct HTTPResponse {
+    status: StatusCode,
+    file_path: Option<PathBuf>,
 }
 
-pub struct HTTPResponse {
-    status: Status,
-    file_path: PathBuf,
+// struct for internal use
+struct ResponseHeader {
+    ver: String,
+    status: StatusCode,
+    content_type: String,
+    content_len: usize,
 }
 
 impl HTTPResponse {
-    pub fn new_using_request_obj(dir_root_node: &DirNode, request: &HTTPRequest) {
-        println!("{:#?}", dir_root_node);
+    pub fn new_from_request_obj(
+        mut stream: &TcpStream,
+        dir_node: &DirNode,
+        request: &HTTPRequest,
+    ) -> HTTPResponse {
+        let mut pathname = dir_node.make_pathname_using_uri(&request.path);
+
+        if pathname.is_dir() {
+            pathname.push(DEFAULT_HTML_FILENAME);
+
+            if !pathname.is_file() {
+                return send_404_response(&mut stream);
+            } else {
+                return send_file(&mut stream, &pathname);
+            }
+        }
+
+        if pathname.is_file() {
+            return send_file(&mut stream, &pathname);
+        } else {
+            return send_404_response(&mut stream);
+        }
     }
 }
 
-// /home -> PathBuf
-// / -> String
-// /home/
+fn send_404_response(mut stream: &TcpStream) -> HTTPResponse {
+    let res_body = make_response_body(NOT_FOUND_BODY);
+    let res_header =
+        make_response_header_obj(StatusCode::NotFound, get_mime_type(".html"), res_body.len());
+
+    send_response(&mut stream, res_header, res_body);
+
+    HTTPResponse {
+        status: StatusCode::NotFound,
+        file_path: None,
+    }
+}
+
+fn send_file<P: AsRef<Path>>(mut stream: &TcpStream, pathname: P) -> HTTPResponse {
+    let file_ext = pathname.as_ref().extension().unwrap().to_str().unwrap();
+    let file_ext = format!(".{}", file_ext);
+
+    let file_contents = fs::read_to_string(&pathname);
+
+    match file_contents {
+        Ok(contents) => {
+            let res_header =
+                make_response_header_obj(StatusCode::OK, get_mime_type(&file_ext), contents.len());
+
+            send_response(&mut stream, res_header, contents);
+
+            HTTPResponse {
+                status: StatusCode::OK,
+                file_path: Some(pathname.as_ref().to_path_buf()),
+            }
+        }
+        Err(_) => HTTPResponse {
+            status: StatusCode::InternalServerError,
+            file_path: None,
+        },
+    }
+}
+
+fn send_response(mut stream: &TcpStream, res_header: ResponseHeader, res_body: String) {
+    let res_header = make_response_header(res_header);
+    let res_msg = make_response_msg(res_header, res_body);
+
+    let _ = stream.write(res_msg.as_bytes());
+}
+
+fn make_response_header_obj(
+    status: StatusCode,
+    mime_type: &str,
+    content_len: usize,
+) -> ResponseHeader {
+    ResponseHeader {
+        ver: "1.1".to_string(),
+        status,
+        content_type: mime_type.to_string(),
+        content_len,
+    }
+}
+fn make_response_header(res_header_obj: ResponseHeader) -> String {
+    format!(
+        "HTTP/{} {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n\r\n",
+        res_header_obj.ver,
+        res_header_obj.status as usize,
+        res_header_obj.status.to_string(),
+        res_header_obj.content_type,
+        res_header_obj.content_len
+    )
+}
+
+fn make_response_msg(res_header: String, res_body: String) -> String {
+    format!("{}{}", res_header, res_body)
+}
+
+fn make_response_body(html_body: &str) -> String {
+    format!("{}{}", html_body, HTML_BODY_CLOSE)
+}
+
+fn get_mime_type(fileext: &str) -> &'static str {
+    for mime_type in MIME_TYPES.iter() {
+        if mime_type.ext == fileext {
+            return mime_type.mtype;
+        }
+    }
+
+    "application/octet-stream"
+}

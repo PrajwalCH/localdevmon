@@ -32,7 +32,9 @@ pub fn start(server_config: ServerConfig) -> io::Result<()> {
 
     for stream in listener.incoming() {
         let stream = stream?;
-        let _conn_handler = ConnectionHandler::new(stream, &dir_root_node);
+        let mut conn_handler = ConnectionHandler::new(stream, &dir_root_node)?;
+        let _response = conn_handler.send_response();
+        // TODO: make a socket connection if response sent properly
     }
 
     Ok(())
