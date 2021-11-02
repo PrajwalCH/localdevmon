@@ -52,6 +52,17 @@ impl Node {
             self.dirs = Some(vec![child_node]);
         }
     }
+
+    pub fn make_pathname_using_uri(&self, request_uri: &str) -> PathBuf {
+        if request_uri == "/" {
+            return self.path.clone();
+        }
+        let pathname = self.path.as_path();
+        let pathname = pathname.join(&request_uri[1..]);
+        println!("{:?}", pathname);
+
+        pathname
+    }
 }
 
 pub fn gen_dir_tree<T: AsRef<Path>>(path: T) -> io::Result<DirNode> {
