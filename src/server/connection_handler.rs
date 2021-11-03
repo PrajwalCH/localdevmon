@@ -35,11 +35,8 @@ impl<'a> ConnectionHandler<'a> {
     }
 
     pub fn send_response(&mut self) -> HTTPResponse {
-        let http_response = HTTPResponse::new_from_request_obj(
-            &mut self.stream,
-            &self.dir_root_node,
-            &self.request,
-        );
+        let http_response =
+            HTTPResponse::new_from_request_obj(&self.stream, &self.dir_root_node, &self.request);
 
         Self::log_request(&self.request);
 

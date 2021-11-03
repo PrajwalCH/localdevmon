@@ -15,7 +15,6 @@ macro_rules! mimetype_new {
     };
 }
 
-#[allow(unused)]
 const MIME_TYPES: [MimeType; 68] = [
     mimetype_new!(".aac", "audio/aac"),
     mimetype_new!(".abw", "pplication/x-abiword"),
@@ -93,10 +92,10 @@ const MIME_TYPES: [MimeType; 68] = [
     mimetype_new!(".7z", "application/x-7z-compressed"),
 ];
 
-const DEFAULT_HTML_FILENAME: &'static str = "index.html";
+const DEFAULT_HTML_FILENAME: &str = "index.html";
 
 #[allow(unused)]
-const NOT_FOUND_BODY: &'static str = "
+const NOT_FOUND_BODY: &str = "
 <html>
 <head>
     <title>404 not found</title>
@@ -109,7 +108,7 @@ const NOT_FOUND_BODY: &'static str = "
 ";
 
 #[allow(unused)]
-const HTML_BODY_CLOSE: &'static str = "
+const HTML_BODY_CLOSE: &str = "
 </body>
 </html>
 ";
@@ -205,7 +204,7 @@ struct ResponseHeader {
 
 impl HTTPResponse {
     pub fn new_from_request_obj(
-        mut stream: &TcpStream,
+        stream: &TcpStream,
         dir_node: &DirNode,
         request: &HTTPRequest,
     ) -> HTTPResponse {
@@ -215,26 +214,26 @@ impl HTTPResponse {
             pathname.push(DEFAULT_HTML_FILENAME);
 
             if !pathname.is_file() {
-                return send_404_response(&mut stream);
+                return send_404_response(&stream);
             } else {
-                return send_file(&mut stream, &pathname);
+                return send_file(&stream, &pathname);
             }
         }
 
         if pathname.is_file() {
-            return send_file(&mut stream, &pathname);
+            send_file(&stream, &pathname)
         } else {
-            return send_404_response(&mut stream);
+            send_404_response(&stream)
         }
     }
 }
 
-fn send_404_response(mut stream: &TcpStream) -> HTTPResponse {
+fn send_404_response(stream: &TcpStream) -> HTTPResponse {
     let res_body = make_response_body(NOT_FOUND_BODY);
     let res_header =
         make_response_header_obj(StatusCode::NotFound, get_mime_type(".html"), res_body.len());
 
-    send_response(&mut stream, res_header, res_body);
+    send_response(&stream, res_header, res_body);
 
     HTTPResponse {
         status: StatusCode::NotFound,
@@ -242,7 +241,7 @@ fn send_404_response(mut stream: &TcpStream) -> HTTPResponse {
     }
 }
 
-fn send_file<P: AsRef<Path>>(mut stream: &TcpStream, pathname: P) -> HTTPResponse {
+fn send_file<P: AsRef<Path>>(stream: &TcpStream, pathname: P) -> HTTPResponse {
     let file_ext = pathname.as_ref().extension().unwrap().to_str().unwrap();
     let file_ext = format!(".{}", file_ext);
 
@@ -253,7 +252,7 @@ fn send_file<P: AsRef<Path>>(mut stream: &TcpStream, pathname: P) -> HTTPRespons
             let res_header =
                 make_response_header_obj(StatusCode::OK, get_mime_type(&file_ext), contents.len());
 
-            send_response(&mut stream, res_header, contents);
+            send_response(&stream, res_header, contents);
 
             HTTPResponse {
                 status: StatusCode::OK,
