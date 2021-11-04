@@ -1,3 +1,4 @@
+use std::fmt;
 use std::fs;
 use std::io::Write;
 use std::net::TcpStream;
@@ -228,10 +229,35 @@ impl HTTPResponse {
     }
 }
 
+impl ResponseHeader {
+    pub(super) fn new(status: StatusCode, mime_type: &str, content_len: usize) -> Self {
+        Self {
+            ver: String::from("1.1"),
+            status,
+            content_type: mime_type.to_string(),
+            content_len,
+        }
+    }
+}
+
+impl fmt::Display for ResponseHeader {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "HTTP/{} {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n\r\n",
+            self.ver,
+            self.status as usize,
+            self.status.to_string(),
+            self.content_type,
+            self.content_len
+        )
+    }
+}
+
 fn send_404_response(stream: &TcpStream) -> HTTPResponse {
     let res_body = make_response_body(NOT_FOUND_BODY);
     let res_header =
-        make_response_header_obj(StatusCode::NotFound, get_mime_type(".html"), res_body.len());
+        ResponseHeader::new(StatusCode::NotFound, get_mime_type(".html"), res_body.len());
 
     send_response(&stream, res_header, res_body);
 
@@ -250,7 +276,7 @@ fn send_file<P: AsRef<Path>>(stream: &TcpStream, pathname: P) -> HTTPResponse {
     match file_contents {
         Ok(contents) => {
             let res_header =
-                make_response_header_obj(StatusCode::OK, get_mime_type(&file_ext), contents.len());
+                ResponseHeader::new(StatusCode::OK, get_mime_type(&file_ext), contents.len());
 
             send_response(&stream, res_header, contents);
 
@@ -267,36 +293,12 @@ fn send_file<P: AsRef<Path>>(stream: &TcpStream, pathname: P) -> HTTPResponse {
 }
 
 fn send_response(mut stream: &TcpStream, res_header: ResponseHeader, res_body: String) {
-    let res_header = make_response_header(res_header);
     let res_msg = make_response_msg(res_header, res_body);
 
     let _ = stream.write(res_msg.as_bytes());
 }
 
-fn make_response_header_obj(
-    status: StatusCode,
-    mime_type: &str,
-    content_len: usize,
-) -> ResponseHeader {
-    ResponseHeader {
-        ver: "1.1".to_string(),
-        status,
-        content_type: mime_type.to_string(),
-        content_len,
-    }
-}
-fn make_response_header(res_header_obj: ResponseHeader) -> String {
-    format!(
-        "HTTP/{} {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n\r\n",
-        res_header_obj.ver,
-        res_header_obj.status as usize,
-        res_header_obj.status.to_string(),
-        res_header_obj.content_type,
-        res_header_obj.content_len
-    )
-}
-
-fn make_response_msg(res_header: String, res_body: String) -> String {
+fn make_response_msg(res_header: ResponseHeader, res_body: String) -> String {
     format!("{}{}", res_header, res_body)
 }
 
