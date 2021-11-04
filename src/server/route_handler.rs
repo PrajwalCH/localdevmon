@@ -59,7 +59,6 @@ impl Node {
         }
         let pathname = self.path.as_path();
         let pathname = pathname.join(&request_uri[1..]);
-        println!("{:?}", pathname);
 
         pathname
     }
