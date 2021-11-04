@@ -109,6 +109,19 @@ const NOT_FOUND_BODY: &str = "
 ";
 
 #[allow(unused)]
+const INTERNAL_SERVER_ERROR_BODY: &str = "
+<html>
+<head>
+    <title>500 Internal Server Error</title>
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
+</head>
+<body>
+    <center>
+        <h2>500 Internal Server Error</h2>
+    </center>
+";
+
+#[allow(unused)]
 const HTML_BODY_CLOSE: &str = "
 </body>
 </html>
@@ -285,10 +298,20 @@ fn send_file<P: AsRef<Path>>(stream: &TcpStream, pathname: P) -> HTTPResponse {
                 file_path: Some(pathname.as_ref().to_path_buf()),
             }
         }
-        Err(_) => HTTPResponse {
-            status: StatusCode::InternalServerError,
-            file_path: None,
-        },
+        Err(_) => {
+            let res_body = make_response_body(INTERNAL_SERVER_ERROR_BODY);
+            let res_header = ResponseHeader::new(
+                StatusCode::InternalServerError,
+                get_mime_type(".html"),
+                res_body.len(),
+            );
+            send_response(&stream, res_header, res_body);
+
+            HTTPResponse {
+                status: StatusCode::InternalServerError,
+                file_path: None,
+            }
+        }
     }
 }
 
