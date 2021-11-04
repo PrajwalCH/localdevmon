@@ -24,7 +24,7 @@ const MIME_TYPES: [MimeType; 68] = [
     mimetype_new!(".azw", "application/vnd.amazon.ebook"),
     mimetype_new!(".bin", "application/octet-stream"),
     mimetype_new!(".bmp", "image/bmp"),
-    mimetype_new!(".bz ", "application/x-bzip"),
+    mimetype_new!(".bz", "application/x-bzip"),
     mimetype_new!(".bz2", "application/x-bzip2"),
     mimetype_new!(".csh", "application/x-csh"),
     mimetype_new!(".css", "text/css"),
@@ -33,7 +33,7 @@ const MIME_TYPES: [MimeType; 68] = [
     //mimetype_new!(".doc","application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
     mimetype_new!(".eot", "application/vnd.ms-fontobject"),
     mimetype_new!(".epu", "application/epub+zip"),
-    mimetype_new!(".gz ", "application/gzip"),
+    mimetype_new!(".gz", "application/gzip"),
     mimetype_new!(".gif", "image/gif"),
     mimetype_new!(".html", "text/html"),
     mimetype_new!(".htm", "text/html"),
@@ -42,7 +42,7 @@ const MIME_TYPES: [MimeType; 68] = [
     mimetype_new!(".jar", "application/java-archive"),
     mimetype_new!(".jpe", "image/jpeg"),
     mimetype_new!(".jpg", "image/jpeg"),
-    mimetype_new!(".js ", "text/javascript"),
+    mimetype_new!(".js", "text/javascript"),
     mimetype_new!(".jso", "application/json"),
     mimetype_new!(".jso", "application/ld+json"),
     mimetype_new!(".mid", "audio/midi"),
@@ -66,13 +66,13 @@ const MIME_TYPES: [MimeType; 68] = [
     //mimetype_new!(".ppt","application/vnd.openxmlformats-officedocument.presentationml.presentation"),
     mimetype_new!(".rar", "application/vnd.rar"),
     mimetype_new!(".rtf", "application/rtf"),
-    mimetype_new!(".sh ", "application/x-sh"),
+    mimetype_new!(".sh", "application/x-sh"),
     mimetype_new!(".svg", "image/svg+xml"),
     mimetype_new!(".swf", "application/x-shockwave-flash"),
     mimetype_new!(".tar", "application/x-tar"),
     mimetype_new!(".tif", "image/tiff"),
     mimetype_new!(".tif", "image/tiff"),
-    mimetype_new!(".ts ", "ideo/mp2t"),
+    mimetype_new!(".ts", "ideo/mp2t"),
     mimetype_new!(".ttf", "font/ttf"),
     mimetype_new!(".txt", "text/plain"),
     mimetype_new!(".vsd", "application/vnd.visio"),
@@ -105,6 +105,19 @@ const NOT_FOUND_BODY: &str = "
 <body>
     <center>
         <h2>404 Not Found</h2>
+    </center>
+";
+
+#[allow(unused)]
+const INTERNAL_SERVER_ERROR_BODY: &str = "
+<html>
+<head>
+    <title>500 Internal Server Error</title>
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
+</head>
+<body>
+    <center>
+        <h2>500 Internal Server Error</h2>
     </center>
 ";
 
@@ -285,10 +298,20 @@ fn send_file<P: AsRef<Path>>(stream: &TcpStream, pathname: P) -> HTTPResponse {
                 file_path: Some(pathname.as_ref().to_path_buf()),
             }
         }
-        Err(_) => HTTPResponse {
-            status: StatusCode::InternalServerError,
-            file_path: None,
-        },
+        Err(_) => {
+            let res_body = make_response_body(INTERNAL_SERVER_ERROR_BODY);
+            let res_header = ResponseHeader::new(
+                StatusCode::InternalServerError,
+                get_mime_type(".html"),
+                res_body.len(),
+            );
+            send_response(&stream, res_header, res_body);
+
+            HTTPResponse {
+                status: StatusCode::InternalServerError,
+                file_path: None,
+            }
+        }
     }
 }
 
